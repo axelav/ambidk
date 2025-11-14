@@ -54,13 +54,21 @@ The application uses a sophisticated multi-layer synthesis system with 80+ simul
 - **Chorus/Detuning**: Each voice consists of 2-3 detuned oscillators (±2-5 cents) creating slow beating
 - **FM Synthesis**: Three FM pairs modulate carrier frequencies for warmth and metallic character
 - **Ultra-slow LFOs**: 20-60 second modulation cycles creating subtle breathing effects
-- **Dynamic Evolution**: Drone slowly evolves every 30-60 seconds with random parameter variations
+- **Stereo Field Evolution**: All voices have stereo panners that slowly drift across the stereo field
+- **Spectral Filtering**: Each layer has filters that sweep between lowpass/highpass for timbral evolution
+- **Harmonic Drift**: ±10Hz slow drift across all oscillators, simulating analog instability
 - **Octave Spreading**: Strategic octave placement for thick, orchestral texture
+- **Adaptive Octave Shifting**: Random voices occasionally jump octaves for dramatic evolution
+
+**Multi-Timescale Evolution:**
+- **Micro-evolution (10-20s)**: Subtle changes to individual voice volumes, stereo positions, and detuning
+- **Macro-evolution (30-60s)**: Aggressive layer volume changes (±30%), FM modulation sweeps, spectral filtering, harmonic drift, LFO speed modulation, and octave shifts
 
 **Signal Chain:**
-Oscillators → FM Modulation → Layer Gains → Effects (Reverb/Delay) → Master Gain → Output
+Oscillators → FM Modulation → Stereo Panners → Voice Gains → Layer Filters → Layer Gains → Effects (Reverb/Delay) → Master Gain → Output
 
 **Total Oscillator Count:** ~89 OscillatorNodes (including LFOs and FM modulators)
+**Additional Nodes:** ~80 StereoPanners, 5 BiquadFilters
 
 ## Browser Compatibility
 
@@ -76,10 +84,14 @@ Requires a browser with Web Audio API support:
 - **Set tone volume to 20-40%** to avoid overwhelming the mix
 - **Use phasing subtly (0.5-3 Hz)** for gentle warbling and chorus effects
 - **Combine the microtonal drone with natural sounds** for incredibly rich textures
-- **Let it evolve**: The drone changes character every 30-60 seconds automatically
+- **Let it evolve**: The drone now has two evolution timescales:
+  - Micro-evolution (10-20s): Subtle stereo and volume shifts
+  - Macro-evolution (30-60s): Dramatic spectral, harmonic, and structural changes
+- **Be patient**: The most interesting evolution happens over 5-10 minutes
 - **Lower root notes (220-330 Hz)** create deeper, more meditative drones
 - **Higher harmonics (6-8)** activate all synthesis layers for maximum complexity
 - **Add reverb (50-70%)** for spatial depth and to blend the layers
+- **Watch the console**: Evolution events are logged so you can track what's changing
 
 ## Local Development
 

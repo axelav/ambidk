@@ -399,19 +399,32 @@ class ComplexDroneEngine {
             fibonacci: null
         };
 
+        // Layer filters for spectral evolution
+        this.layerFilters = {
+            justIntonation: null,
+            harmonicSeries: null,
+            subharmonic: null,
+            goldenRatio: null,
+            fibonacci: null
+        };
+
         // FM synthesis
         this.fmPairs = [];
 
         // LFOs for evolution
         this.lfos = [];
 
-        // Evolution interval
-        this.evolutionInterval = null;
+        // Evolution intervals
+        this.microEvolutionInterval = null;
+        this.macroEvolutionInterval = null;
 
         // Master drone gain
         this.droneGain = null;
 
         this.rootFrequency = 440;
+
+        // Harmonic drift tracking
+        this.harmonicDriftAmount = 0;
     }
 
     start(rootFreq, complexity, volume, phasing) {
@@ -424,10 +437,20 @@ class ComplexDroneEngine {
         this.droneGain.connect(this.delayNode);
         this.droneGain.connect(this.masterGain);
 
-        // Create layer gains
+        // Create layer gains and filters
         Object.keys(this.layerGains).forEach(layer => {
+            // Create filter for spectral evolution
+            this.layerFilters[layer] = this.ctx.createBiquadFilter();
+            this.layerFilters[layer].type = 'lowpass';
+            this.layerFilters[layer].frequency.value = 20000; // Start fully open
+            this.layerFilters[layer].Q.value = 0.5;
+
+            // Create gain node
             this.layerGains[layer] = this.ctx.createGain();
             this.layerGains[layer].gain.value = 0;
+
+            // Connect filter → gain → drone
+            this.layerFilters[layer].connect(this.layerGains[layer]);
             this.layerGains[layer].connect(this.droneGain);
         });
 
@@ -448,7 +471,7 @@ class ComplexDroneEngine {
         this.setComplexity(complexity);
         this.setMasterVolume(volume);
 
-        // Start evolution
+        // Start evolution (both micro and macro)
         this.startEvolution();
 
         // Fade in
@@ -456,9 +479,12 @@ class ComplexDroneEngine {
     }
 
     stop() {
-        // Stop evolution
-        if (this.evolutionInterval) {
-            clearInterval(this.evolutionInterval);
+        // Stop evolution intervals
+        if (this.microEvolutionInterval) {
+            clearInterval(this.microEvolutionInterval);
+        }
+        if (this.macroEvolutionInterval) {
+            clearInterval(this.macroEvolutionInterval);
         }
 
         // Stop all oscillators
@@ -557,15 +583,21 @@ class ComplexDroneEngine {
             ratio: ratio,
             oscillators: [],
             gains: [],
+            panners: [],
             baseAmplitude: baseAmplitude,
             currentAmplitude: baseAmplitude,
-            lfo: null
+            lfo: null,
+            octaveShift: 1 // Track octave shifting (1 = normal, 2 = up, 0.5 = down)
         };
+
+        // Random initial stereo position for this voice
+        const initialPan = (Math.random() * 2 - 1) * 0.7; // -0.7 to +0.7
 
         // Create detuned oscillators for this voice
         for (let i = 0; i < detuneCount; i++) {
             const osc = this.ctx.createOscillator();
             const gain = this.ctx.createGain();
+            const panner = this.ctx.createStereoPanner();
 
             osc.type = 'sine';
 
@@ -591,15 +623,21 @@ class ComplexDroneEngine {
                 osc.detune.value = detuneCents;
             }
 
+            // Set initial pan position (slight variation per oscillator)
+            panner.pan.value = initialPan + (Math.random() * 0.2 - 0.1);
+
             // Volume distribution across detuned oscillators
             gain.gain.value = baseAmplitude / detuneCount;
 
-            osc.connect(gain);
-            gain.connect(this.layerGains[layerName]);
+            // Connect: osc → panner → gain → filter → layer gain
+            osc.connect(panner);
+            panner.connect(gain);
+            gain.connect(this.layerFilters[layerName]);
             osc.start();
 
             voice.oscillators.push(osc);
             voice.gains.push(gain);
+            voice.panners.push(panner);
         }
 
         this.layers[layerName].push(voice);
@@ -733,32 +771,167 @@ class ComplexDroneEngine {
     }
 
     startEvolution() {
-        // Dynamic evolution every 30-60 seconds
-        this.evolutionInterval = setInterval(() => {
-            this.evolve();
+        // Micro-evolution: subtle changes every 10-20 seconds
+        this.microEvolutionInterval = setInterval(() => {
+            this.microEvolve();
+        }, (10 + Math.random() * 10) * 1000);
+
+        // Macro-evolution: major changes every 30-60 seconds
+        this.macroEvolutionInterval = setInterval(() => {
+            this.macroEvolve();
         }, (30 + Math.random() * 30) * 1000);
     }
 
-    evolve() {
-        // Randomly adjust layer volumes slightly
-        Object.entries(this.layerGains).forEach(([name, gain]) => {
-            const variation = 0.9 + Math.random() * 0.2; // ±10%
-            const currentValue = gain.gain.value;
-            const newValue = currentValue * variation;
-            gain.gain.setTargetAtTime(newValue, this.ctx.currentTime, 5); // 5 second crossfade
+    microEvolve() {
+        // Subtle individual voice volume changes
+        Object.values(this.layers).forEach(layer => {
+            layer.forEach(voice => {
+                if (Math.random() > 0.6) { // 40% chance per voice
+                    voice.gains.forEach(gain => {
+                        const variation = 0.85 + Math.random() * 0.3; // ±15%
+                        const currentValue = gain.gain.value;
+                        const newValue = currentValue * variation;
+                        gain.gain.setTargetAtTime(newValue, this.ctx.currentTime, 3);
+                    });
+                }
+            });
         });
 
-        // Randomly adjust some FM modulation indices
+        // Slowly shift stereo positions
+        Object.values(this.layers).forEach(layer => {
+            layer.forEach(voice => {
+                if (Math.random() > 0.5) { // 50% chance
+                    voice.panners.forEach(panner => {
+                        const shift = (Math.random() * 0.3 - 0.15); // ±0.15
+                        const newPan = Math.max(-1, Math.min(1, panner.pan.value + shift));
+                        panner.pan.setTargetAtTime(newPan, this.ctx.currentTime, 4);
+                    });
+                }
+            });
+        });
+
+        // Vary detuning amounts slightly
+        Object.values(this.layers).forEach(layer => {
+            layer.forEach(voice => {
+                if (Math.random() > 0.7) { // 30% chance
+                    voice.oscillators.forEach((osc, i) => {
+                        if (i > 0) { // Skip the center oscillator
+                            const detuneShift = (Math.random() * 2 - 1); // ±1 cent
+                            const newDetune = osc.detune.value + detuneShift;
+                            osc.detune.setTargetAtTime(
+                                Math.max(-10, Math.min(10, newDetune)),
+                                this.ctx.currentTime,
+                                3
+                            );
+                        }
+                    });
+                }
+            });
+        });
+
+        console.log('Micro-evolution: subtle shifts...');
+    }
+
+    macroEvolve() {
+        // Aggressive layer volume changes (±30%)
+        Object.entries(this.layerGains).forEach(([name, gain]) => {
+            const variation = 0.7 + Math.random() * 0.6; // ±30%
+            const currentValue = gain.gain.value;
+            let newValue = currentValue * variation;
+
+            // Occasionally fade a layer completely in/out
+            if (Math.random() > 0.85) {
+                newValue = Math.random() > 0.5 ? 0 : currentValue * 1.5;
+            }
+
+            gain.gain.setTargetAtTime(newValue, this.ctx.currentTime, 8); // 8 second crossfade
+        });
+
+        // Aggressive FM modulation changes (0.2 to 3.0)
         this.fmPairs.forEach(pair => {
+            const newIndex = 0.2 + Math.random() * 2.8;
+            pair.modGain.gain.setTargetAtTime(newIndex, this.ctx.currentTime, 6);
+        });
+
+        // Spectral evolution - sweep filters
+        Object.entries(this.layerFilters).forEach(([name, filter]) => {
             if (Math.random() > 0.5) {
-                const variation = 0.8 + Math.random() * 0.4;
-                const currentValue = pair.modGain.gain.value;
-                const newValue = Math.max(0.2, Math.min(2, currentValue * variation));
-                pair.modGain.gain.setTargetAtTime(newValue, this.ctx.currentTime, 5);
+                // Randomly choose filter type
+                filter.type = Math.random() > 0.5 ? 'lowpass' : 'highpass';
+
+                // Sweep frequency
+                let targetFreq;
+                if (filter.type === 'lowpass') {
+                    targetFreq = 500 + Math.random() * 15000; // 500Hz - 15kHz
+                } else {
+                    targetFreq = 100 + Math.random() * 2000; // 100Hz - 2kHz
+                }
+
+                filter.frequency.setTargetAtTime(targetFreq, this.ctx.currentTime, 10);
+            } else {
+                // Reset to fully open
+                filter.frequency.setTargetAtTime(20000, this.ctx.currentTime, 10);
             }
         });
 
-        console.log('Drone evolved...');
+        // Harmonic drift - slowly detune entire layers
+        this.harmonicDriftAmount += (Math.random() * 10 - 5); // ±5 Hz
+        this.harmonicDriftAmount = Math.max(-10, Math.min(10, this.harmonicDriftAmount));
+
+        Object.values(this.layers).forEach(layer => {
+            layer.forEach(voice => {
+                voice.oscillators.forEach(osc => {
+                    const baseFreq = osc.frequency.value;
+                    osc.frequency.setTargetAtTime(
+                        baseFreq + this.harmonicDriftAmount,
+                        this.ctx.currentTime,
+                        15
+                    );
+                });
+            });
+        });
+
+        // Modulate LFO speeds (meta-modulation)
+        this.lfos.forEach(lfo => {
+            if (lfo.osc && !lfo.phasing) {
+                const newSpeed = 0.01 + Math.random() * 0.04; // 0.01-0.05 Hz
+                lfo.osc.frequency.setTargetAtTime(newSpeed, this.ctx.currentTime, 20);
+            }
+        });
+
+        // Occasional octave shifts
+        Object.entries(this.layers).forEach(([layerName, layer]) => {
+            if (Math.random() > 0.8) { // 20% chance per layer
+                const randomVoice = layer[Math.floor(Math.random() * layer.length)];
+
+                // Choose new octave shift
+                const shifts = [0.5, 1, 2]; // down octave, normal, up octave
+                const newShift = shifts[Math.floor(Math.random() * shifts.length)];
+
+                if (newShift !== randomVoice.octaveShift) {
+                    randomVoice.octaveShift = newShift;
+
+                    // Update frequencies
+                    randomVoice.oscillators.forEach(osc => {
+                        let baseFreq = this.rootFrequency * randomVoice.ratio;
+
+                        // Apply layer-specific octave spreading
+                        if (layerName === 'harmonicSeries' && randomVoice.ratio > 7) {
+                            baseFreq = baseFreq / 2;
+                        }
+                        if (layerName === 'goldenRatio' && randomVoice.ratio > 2) {
+                            baseFreq = baseFreq / 2;
+                        }
+
+                        // Apply octave shift
+                        const targetFreq = baseFreq * newShift;
+                        osc.frequency.setTargetAtTime(targetFreq, this.ctx.currentTime, 5);
+                    });
+                }
+            }
+        });
+
+        console.log(`Macro-evolution: major changes (drift: ${this.harmonicDriftAmount.toFixed(2)}Hz)`);
     }
 
     updateRoot(newRootFreq) {
