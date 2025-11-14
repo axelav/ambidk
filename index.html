@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Ambient Music Generator</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <div class="container">
+        <h1>🎵 Ambient Music Generator</h1>
+
+        <div class="control-section">
+            <h2>Tone Controls</h2>
+
+            <div class="control-group">
+                <label for="rootNote">Root Note: <span id="rootNoteValue">A4</span></label>
+                <input type="range" id="rootNote" min="220" max="880" value="440" step="1">
+            </div>
+
+            <div class="control-group">
+                <label for="frequency">Frequency Multiplier: <span id="frequencyValue">1.0x</span></label>
+                <input type="range" id="frequency" min="0.5" max="4" value="1" step="0.1">
+            </div>
+
+            <div class="control-group">
+                <label for="phasing">Phasing: <span id="phasingValue">0.00 Hz</span></label>
+                <input type="range" id="phasing" min="0" max="10" value="0" step="0.1">
+            </div>
+
+            <div class="control-group">
+                <label for="harmonics">Harmonics: <span id="harmonicsValue">3</span></label>
+                <input type="range" id="harmonics" min="1" max="8" value="3" step="1">
+            </div>
+
+            <div class="control-group">
+                <label for="toneVolume">Tone Volume: <span id="toneVolumeValue">30%</span></label>
+                <input type="range" id="toneVolume" min="0" max="100" value="30" step="1">
+            </div>
+        </div>
+
+        <div class="control-section">
+            <h2>Natural Sounds</h2>
+
+            <div class="control-group">
+                <label for="rain">Rain: <span id="rainValue">0%</span></label>
+                <input type="range" id="rain" min="0" max="100" value="0" step="1">
+            </div>
+
+            <div class="control-group">
+                <label for="water">Water Flow: <span id="waterValue">0%</span></label>
+                <input type="range" id="water" min="0" max="100" value="0" step="1">
+            </div>
+
+            <div class="control-group">
+                <label for="static">Static: <span id="staticValue">0%</span></label>
+                <input type="range" id="static" min="0" max="100" value="0" step="1">
+            </div>
+
+            <div class="control-group">
+                <label for="metallic">Metallic Hum: <span id="metallicValue">0%</span></label>
+                <input type="range" id="metallic" min="0" max="100" value="0" step="1">
+            </div>
+
+            <div class="control-group">
+                <label for="wind">Wind: <span id="windValue">0%</span></label>
+                <input type="range" id="wind" min="0" max="100" value="0" step="1">
+            </div>
+        </div>
+
+        <div class="control-section">
+            <h2>Effects</h2>
+
+            <div class="control-group">
+                <label for="reverb">Reverb: <span id="reverbValue">50%</span></label>
+                <input type="range" id="reverb" min="0" max="100" value="50" step="1">
+            </div>
+
+            <div class="control-group">
+                <label for="delay">Delay: <span id="delayValue">0%</span></label>
+                <input type="range" id="delay" min="0" max="100" value="0" step="1">
+            </div>
+        </div>
+
+        <div class="button-group">
+            <button id="startBtn" class="btn btn-primary">Start</button>
+            <button id="stopBtn" class="btn btn-secondary" disabled>Stop</button>
+        </div>
+
+        <div class="info">
+            <p>Click "Start" to begin generating ambient music. Adjust the sliders to shape your soundscape.</p>
+        </div>
+    </div>
+
+    <script src="app.js"></script>
+</body>
+</html>
