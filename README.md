@@ -39,9 +39,28 @@ Generate realistic natural ambient sounds:
 
 ## Audio Architecture
 
-- **Oscillators**: Multiple sine wave oscillators with harmonic relationships
-- **Noise Generators**: White noise filtered to create natural sound textures
-- **Signal Chain**: Audio → Filters → Effects → Master Gain → Output
+### Complex Microtonal Drone Engine
+
+The application uses a sophisticated multi-layer synthesis system with 80+ simultaneous oscillators:
+
+**Synthesis Layers:**
+- **Just Intonation Layer**: 8 voices using pure intervals (1:1, 9:8, 5:4, 4:3, 3:2, 5:3, 15:8, 2:1)
+- **Harmonic Series Layer**: 9 voices following the natural harmonic series (1, 2, 3, 4, 5, 7, 9, 11, 13)
+- **Subharmonic Layer**: 4 voices below the root frequency for deep bass presence
+- **Golden Ratio Layer**: 6 voices using φ (1.618...) and its derivatives for irrational intervals
+- **Fibonacci Layer**: 5 voices using Fibonacci sequence ratios (2:3, 3:5, 5:8, 8:13, 13:21)
+
+**Advanced Features:**
+- **Chorus/Detuning**: Each voice consists of 2-3 detuned oscillators (±2-5 cents) creating slow beating
+- **FM Synthesis**: Three FM pairs modulate carrier frequencies for warmth and metallic character
+- **Ultra-slow LFOs**: 20-60 second modulation cycles creating subtle breathing effects
+- **Dynamic Evolution**: Drone slowly evolves every 30-60 seconds with random parameter variations
+- **Octave Spreading**: Strategic octave placement for thick, orchestral texture
+
+**Signal Chain:**
+Oscillators → FM Modulation → Layer Gains → Effects (Reverb/Delay) → Master Gain → Output
+
+**Total Oscillator Count:** ~89 OscillatorNodes (including LFOs and FM modulators)
 
 ## Browser Compatibility
 
@@ -53,11 +72,14 @@ Requires a browser with Web Audio API support:
 
 ## Tips for Best Results
 
-- Start with low volumes and gradually increase
-- Combine tones with natural sounds for rich textures
-- Use phasing subtly (0.1-2 Hz) for organic movement
-- Layer multiple natural sounds at different levels
-- Add reverb for spatial depth
+- **Start with complexity level 3-4** and adjust from there
+- **Set tone volume to 20-40%** to avoid overwhelming the mix
+- **Use phasing subtly (0.5-3 Hz)** for gentle warbling and chorus effects
+- **Combine the microtonal drone with natural sounds** for incredibly rich textures
+- **Let it evolve**: The drone changes character every 30-60 seconds automatically
+- **Lower root notes (220-330 Hz)** create deeper, more meditative drones
+- **Higher harmonics (6-8)** activate all synthesis layers for maximum complexity
+- **Add reverb (50-70%)** for spatial depth and to blend the layers
 
 ## Local Development
 
