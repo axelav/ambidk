@@ -33,6 +33,8 @@ class AmbientMusicGenerator {
         // Parameters
         this.params = {
             rootNote: 440,
+            currentNote: 'A',
+            currentOctave: 4,
             frequency: 1,
             phasing: 0,
             harmonics: 3,
@@ -50,14 +52,55 @@ class AmbientMusicGenerator {
     }
 
     initControls() {
-        // Tone controls
-        document.getElementById('rootNote').addEventListener('input', (e) => {
-            this.params.rootNote = parseFloat(e.target.value);
-            document.getElementById('rootNoteValue').textContent =
-                this.frequencyToNote(this.params.rootNote);
-            if (this.droneEngine) {
-                this.droneEngine.updateRoot(this.params.rootNote * this.params.frequency);
-            }
+        // Note button controls
+        const noteButtons = document.querySelectorAll('.note-btn');
+        noteButtons.forEach(btn => {
+            btn.addEventListener('click', () => {
+                // Remove active class from all note buttons
+                noteButtons.forEach(b => b.classList.remove('active'));
+                // Add active class to clicked button
+                btn.classList.add('active');
+
+                // Update current note and calculate frequency
+                this.params.currentNote = btn.dataset.note;
+                const baseFreq = parseFloat(btn.dataset.freq);
+                const octaveMultiplier = Math.pow(2, this.params.currentOctave - 4);
+                this.params.rootNote = baseFreq * octaveMultiplier;
+
+                // Update display
+                this.updateNoteDisplay();
+
+                // Update drone engine
+                if (this.droneEngine) {
+                    this.droneEngine.updateRoot(this.params.rootNote * this.params.frequency);
+                }
+            });
+        });
+
+        // Octave button controls
+        const octaveButtons = document.querySelectorAll('.octave-btn');
+        octaveButtons.forEach(btn => {
+            btn.addEventListener('click', () => {
+                // Remove active class from all octave buttons
+                octaveButtons.forEach(b => b.classList.remove('active'));
+                // Add active class to clicked button
+                btn.classList.add('active');
+
+                // Update current octave and recalculate frequency
+                this.params.currentOctave = parseInt(btn.dataset.octave);
+                const activeNoteBtn = document.querySelector('.note-btn.active');
+                const baseFreq = parseFloat(activeNoteBtn.dataset.freq);
+                const octaveMultiplier = Math.pow(2, this.params.currentOctave - 4);
+                this.params.rootNote = baseFreq * octaveMultiplier;
+
+                // Update display
+                this.updateNoteDisplay();
+
+                // Update drone engine
+                if (this.droneEngine) {
+                    this.droneEngine.updateRoot(this.params.rootNote * this.params.frequency);
+                }
+            });
         });
 
         document.getElementById('frequency').addEventListener('input', (e) => {
@@ -140,6 +183,11 @@ class AmbientMusicGenerator {
         const octave = Math.floor(halfSteps / 12);
         const note = noteNames[halfSteps % 12];
         return `${note}${octave}`;
+    }
+
+    updateNoteDisplay() {
+        const noteText = `${this.params.currentNote}${this.params.currentOctave} / ${Math.round(this.params.rootNote)}Hz`;
+        document.getElementById('rootNoteValue').textContent = noteText;
     }
 
     async start() {
