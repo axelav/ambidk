@@ -224,6 +224,13 @@ class AmbientMusicGenerator {
         // Create noise generators
         this.startNoises();
 
+        // Create generative bell tone system
+        this.bellGenerator = new BellGenerator(
+            this.audioContext,
+            this.masterGain
+        );
+        this.bellGenerator.updateRoot(this.params.rootNote * this.params.frequency);
+
         // Connect master gain to destination
         this.masterGain.connect(this.audioContext.destination);
     }
@@ -234,6 +241,11 @@ class AmbientMusicGenerator {
         if (this.droneEngine) {
             this.droneEngine.stop();
             this.droneEngine = null;
+        }
+
+        if (this.bellGenerator) {
+            this.bellGenerator.stop();
+            this.bellGenerator = null;
         }
 
         this.stopNoises();
@@ -819,57 +831,57 @@ class ComplexDroneEngine {
     }
 
     startEvolution() {
-        // Micro-evolution: subtle changes every 10-20 seconds
+        // Micro-evolution: subtle changes every 5-12 seconds (increased frequency)
         this.microEvolutionInterval = setInterval(() => {
             this.microEvolve();
-        }, (10 + Math.random() * 10) * 1000);
+        }, (5 + Math.random() * 7) * 1000);
 
-        // Macro-evolution: major changes every 30-60 seconds
+        // Macro-evolution: major changes every 15-35 seconds (more frequent)
         this.macroEvolutionInterval = setInterval(() => {
             this.macroEvolve();
-        }, (30 + Math.random() * 30) * 1000);
+        }, (15 + Math.random() * 20) * 1000);
     }
 
     microEvolve() {
-        // Subtle individual voice volume changes
+        // Individual voice volume changes (more aggressive)
         Object.values(this.layers).forEach(layer => {
             layer.forEach(voice => {
-                if (Math.random() > 0.6) { // 40% chance per voice
+                if (Math.random() > 0.5) { // 50% chance per voice (increased)
                     voice.gains.forEach(gain => {
-                        const variation = 0.85 + Math.random() * 0.3; // ±15%
+                        const variation = 0.7 + Math.random() * 0.6; // ±30% (more variation)
                         const currentValue = gain.gain.value;
                         const newValue = currentValue * variation;
-                        gain.gain.setTargetAtTime(newValue, this.ctx.currentTime, 3);
+                        gain.gain.setTargetAtTime(newValue, this.ctx.currentTime, 2);
                     });
                 }
             });
         });
 
-        // Slowly shift stereo positions
+        // More dramatic stereo position shifts
         Object.values(this.layers).forEach(layer => {
             layer.forEach(voice => {
-                if (Math.random() > 0.5) { // 50% chance
+                if (Math.random() > 0.4) { // 60% chance (increased)
                     voice.panners.forEach(panner => {
-                        const shift = (Math.random() * 0.3 - 0.15); // ±0.15
+                        const shift = (Math.random() * 0.5 - 0.25); // ±0.25 (more movement)
                         const newPan = Math.max(-1, Math.min(1, panner.pan.value + shift));
-                        panner.pan.setTargetAtTime(newPan, this.ctx.currentTime, 4);
+                        panner.pan.setTargetAtTime(newPan, this.ctx.currentTime, 3);
                     });
                 }
             });
         });
 
-        // Vary detuning amounts slightly
+        // More aggressive detuning variations
         Object.values(this.layers).forEach(layer => {
             layer.forEach(voice => {
-                if (Math.random() > 0.7) { // 30% chance
+                if (Math.random() > 0.6) { // 40% chance (increased)
                     voice.oscillators.forEach((osc, i) => {
                         if (i > 0) { // Skip the center oscillator
-                            const detuneShift = (Math.random() * 2 - 1); // ±1 cent
+                            const detuneShift = (Math.random() * 3 - 1.5); // ±1.5 cents (more variation)
                             const newDetune = osc.detune.value + detuneShift;
                             osc.detune.setTargetAtTime(
-                                Math.max(-10, Math.min(10, newDetune)),
+                                Math.max(-15, Math.min(15, newDetune)),
                                 this.ctx.currentTime,
-                                3
+                                2
                             );
                         }
                     });
@@ -877,22 +889,22 @@ class ComplexDroneEngine {
             });
         });
 
-        console.log('Micro-evolution: subtle shifts...');
+        console.log('Micro-evolution: shifts...');
     }
 
     macroEvolve() {
-        // Aggressive layer volume changes (±30%)
+        // Very aggressive layer volume changes (±50%)
         Object.entries(this.layerGains).forEach(([name, gain]) => {
-            const variation = 0.7 + Math.random() * 0.6; // ±30%
+            const variation = 0.5 + Math.random() * 1.0; // ±50% (much more dramatic)
             const currentValue = gain.gain.value;
             let newValue = currentValue * variation;
 
-            // Occasionally fade a layer completely in/out
-            if (Math.random() > 0.85) {
-                newValue = Math.random() > 0.5 ? 0 : currentValue * 1.5;
+            // More frequently fade layers in/out
+            if (Math.random() > 0.75) { // 25% chance (increased from 15%)
+                newValue = Math.random() > 0.5 ? 0 : currentValue * 2.0;
             }
 
-            gain.gain.setTargetAtTime(newValue, this.ctx.currentTime, 8); // 8 second crossfade
+            gain.gain.setTargetAtTime(newValue, this.ctx.currentTime, 6); // 6 second crossfade (faster)
         });
 
         // Aggressive FM modulation changes (0.2 to 3.0)
@@ -985,7 +997,7 @@ class ComplexDroneEngine {
     updateRoot(newRootFreq) {
         this.rootFrequency = newRootFreq;
 
-        // Update all oscillators
+        // Update all oscillators IMMEDIATELY (no glissando)
         Object.entries(this.layers).forEach(([layerName, layer]) => {
             layer.forEach(voice => {
                 let freq = this.rootFrequency * voice.ratio;
@@ -999,22 +1011,27 @@ class ComplexDroneEngine {
                 }
 
                 voice.oscillators.forEach(osc => {
-                    osc.frequency.setTargetAtTime(freq, this.ctx.currentTime, 0.5);
+                    osc.frequency.setValueAtTime(freq, this.ctx.currentTime);
                 });
             });
         });
 
-        // Update FM modulators
+        // Update FM modulators immediately
         if (this.fmPairs.length >= 3) {
-            this.fmPairs[0].modulator.frequency.setTargetAtTime(
-                this.rootFrequency / 4, this.ctx.currentTime, 0.5
+            this.fmPairs[0].modulator.frequency.setValueAtTime(
+                this.rootFrequency / 4, this.ctx.currentTime
             );
-            this.fmPairs[1].modulator.frequency.setTargetAtTime(
-                this.rootFrequency * (3/5), this.ctx.currentTime, 0.5
+            this.fmPairs[1].modulator.frequency.setValueAtTime(
+                this.rootFrequency * (3/5), this.ctx.currentTime
             );
-            this.fmPairs[2].modulator.frequency.setTargetAtTime(
-                this.rootFrequency * 1.618 / 4, this.ctx.currentTime, 0.5
+            this.fmPairs[2].modulator.frequency.setValueAtTime(
+                this.rootFrequency * 1.618 / 4, this.ctx.currentTime
             );
+        }
+
+        // Update bell generator with new root
+        if (this.bellGenerator) {
+            this.bellGenerator.updateRoot(this.rootFrequency);
         }
     }
 
@@ -1048,6 +1065,152 @@ class ComplexDroneEngine {
         if (this.droneGain) {
             this.droneGain.gain.setTargetAtTime(volume, this.ctx.currentTime, 0.1);
         }
+    }
+}
+
+// ============================================================================
+// GENERATIVE BELL TONE SYSTEM
+// ============================================================================
+
+class BellGenerator {
+    constructor(audioContext, masterGain) {
+        this.ctx = audioContext;
+        this.masterGain = masterGain;
+        this.rootFrequency = 440;
+
+        // Current scale (will mutate over time)
+        this.currentScale = [];
+        this.scaleDegreeWeights = []; // Probability weights for each scale degree
+
+        // Timing
+        this.nextBellTime = 0;
+        this.minInterval = 8; // Minimum seconds between bells
+        this.maxInterval = 20; // Maximum seconds between bells
+
+        // Bell parameters
+        this.bellGain = this.ctx.createGain();
+        this.bellGain.gain.value = 0.15; // Subdued volume
+        this.bellGain.connect(this.masterGain);
+
+        // Generate initial scale
+        this.generateScale();
+
+        // Start the bell scheduler
+        this.schedule();
+    }
+
+    generateScale() {
+        // Pentatonic scale (no dissonant half steps)
+        // Scale degrees: 1, 2, 3, 5, 6 (major pentatonic)
+        const pentatonicRatios = [
+            1,      // Root
+            9/8,    // Major second
+            5/4,    // Major third
+            3/2,    // Perfect fifth
+            5/3,    // Major sixth
+            2,      // Octave
+            9/4,    // Major second up an octave
+            5/2     // Major third up an octave
+        ];
+
+        this.currentScale = pentatonicRatios.map(ratio => this.rootFrequency * ratio);
+
+        // Initialize random weights for scale degrees (will mutate)
+        this.scaleDegreeWeights = this.currentScale.map(() => Math.random());
+        this.normalizeWeights();
+    }
+
+    normalizeWeights() {
+        const sum = this.scaleDegreeWeights.reduce((a, b) => a + b, 0);
+        this.scaleDegreeWeights = this.scaleDegreeWeights.map(w => w / sum);
+    }
+
+    mutateScaleWeights() {
+        // Randomly adjust the weights to change which notes are favored
+        this.scaleDegreeWeights = this.scaleDegreeWeights.map(weight => {
+            const mutation = 0.7 + Math.random() * 0.6; // ±30% variation
+            return weight * mutation;
+        });
+        this.normalizeWeights();
+    }
+
+    chooseNote() {
+        // Weighted random selection
+        const rand = Math.random();
+        let cumulative = 0;
+        for (let i = 0; i < this.scaleDegreeWeights.length; i++) {
+            cumulative += this.scaleDegreeWeights[i];
+            if (rand < cumulative) {
+                return this.currentScale[i];
+            }
+        }
+        return this.currentScale[0]; // Fallback
+    }
+
+    playBell(frequency) {
+        const now = this.ctx.currentTime;
+
+        // Create subdued bell sound using multiple slightly detuned oscillators
+        const numOscs = 3;
+        const detunes = [0, 3, -3]; // Subtle detuning for thickness
+
+        for (let i = 0; i < numOscs; i++) {
+            const osc = this.ctx.createOscillator();
+            const oscGain = this.ctx.createGain();
+
+            // Use sine for subdued, non-bright tone
+            osc.type = 'sine';
+            osc.frequency.value = frequency;
+            osc.detune.value = detunes[i];
+
+            // Envelope: slow attack, long decay for subdued bell character
+            const attackTime = 0.05 + Math.random() * 0.1; // 50-150ms attack
+            const decayTime = 4 + Math.random() * 3; // 4-7 second decay
+            const peakLevel = 0.3 / numOscs; // Divided among oscillators
+
+            oscGain.gain.setValueAtTime(0, now);
+            oscGain.gain.linearRampToValueAtTime(peakLevel, now + attackTime);
+            oscGain.gain.exponentialRampToValueAtTime(0.001, now + attackTime + decayTime);
+
+            osc.connect(oscGain);
+            oscGain.connect(this.bellGain);
+
+            osc.start(now);
+            osc.stop(now + attackTime + decayTime + 0.1);
+        }
+
+        // Occasionally mutate the scale weights (10% chance)
+        if (Math.random() > 0.9) {
+            this.mutateScaleWeights();
+            console.log('Bell melody mutated...');
+        }
+    }
+
+    schedule() {
+        const now = this.ctx.currentTime;
+
+        // If it's time to play a bell
+        if (now >= this.nextBellTime) {
+            const frequency = this.chooseNote();
+            this.playBell(frequency);
+
+            // Schedule next bell at random interval
+            const interval = this.minInterval + Math.random() * (this.maxInterval - this.minInterval);
+            this.nextBellTime = now + interval;
+        }
+
+        // Check again in 100ms
+        setTimeout(() => this.schedule(), 100);
+    }
+
+    updateRoot(newRootFreq) {
+        this.rootFrequency = newRootFreq;
+        this.generateScale(); // Regenerate scale with new root
+    }
+
+    stop() {
+        // The bells will naturally stop as they decay
+        // No persistent oscillators to stop
     }
 }
 
